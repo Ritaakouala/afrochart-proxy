@@ -1,6 +1,6 @@
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  const genreId = req.query.genre || 0; // 0 = classement mondial toutes musiques
+  const genreId = req.query.genre || 0;
   try {
     const response = await fetch(`https://api.deezer.com/chart/${genreId}`);
     const data = await response.json();
