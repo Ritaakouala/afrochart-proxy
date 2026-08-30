@@ -1,49 +1,132 @@
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  // ==============================
+  // CORS
+  // ==============================
 
-  const genreId = req.query.genre || 0;
-  const limit = req.query.limit || 10;
-  const albumId = req.query.albumId;
-  const artistId = req.query.artistId;
-  const search = req.query.search;
-  const playlistId = req.query.playlistId;
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET, OPTIONS"
+  );
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type"
+  );
+
+  // Réponse aux requêtes OPTIONS
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  // ==============================
+  // PARAMÈTRES
+  // ==============================
+
+  const {
+    genre,
+    limit = 50,
+    albumId,
+    artistId,
+    playlistId,
+    search,
+  } = req.query;
 
   try {
-    let url;
+    let url = "";
+
+    // ==============================
+    // RECHERCHE
+    // ==============================
 
     if (search) {
-      url = `https://api.deezer.com/search?q=${encodeURIComponent(
-        search
-      )}&limit=${limit}`;
-    } 
-    
+      url =
+        `https://api.deezer.com/search` +
+        `?q=${encodeURIComponent(search)}` +
+        `&limit=${limit}`;
+    }
+
+    // ==============================
+    // ALBUM
+    // ==============================
+
     else if (albumId) {
-      url = `https://api.deezer.com/album/${albumId}/tracks`;
-    } 
-    
+      url =
+        `https://api.deezer.com/album/${albumId}/tracks` +
+        `?limit=${limit}`;
+    }
+
+    // ==============================
+    // ARTISTE
+    // ==============================
+
     else if (artistId) {
-      url = `https://api.deezer.com/artist/${artistId}/top?limit=${limit}`;
+      url =
+        `https://api.deezer.com/artist/${artistId}/top` +
+        `?limit=${limit}`;
     }
-    
+
+    // ==============================
+    // PLAYLIST
+    // ==============================
+
     else if (playlistId) {
-      url = `https://api.deezer.com/playlist/${playlistId}/tracks?limit=${limit}`;
-    } 
-    
-    else {
-      url = `https://api.deezer.com/chart/${genreId}?limit=${limit}`;
+      url =
+        `https://api.deezer.com/playlist/${playlistId}/tracks` +
+        `?limit=${limit}`;
     }
+
+    // ==============================
+    // CHART
+    // ==============================
+
+    else {
+      const genreId = genre || 0;
+
+      url =
+        `https://api.deezer.com/chart/${genreId}/tracks` +
+        `?limit=${limit}`;
+    }
+
+    console.log("URL Deezer :", url);
+
+    // ==============================
+    // APPEL DEEZER
+    // ==============================
 
     const response = await fetch(url);
+
+    if (!response.ok) {
+      return res.status(response.status).json({
+        error: "Erreur API Deezer",
+        status: response.status,
+      });
+    }
+
     const data = await response.json();
 
-    res.status(200).json(data);
+    // ==============================
+    // ERREUR DEEZER
+    // ==============================
 
+    if (data.error) {
+      return res.status(400).json({
+        error: "Deezer a retourné une erreur",
+        details: data.error,
+      });
+    }
+
+    // ==============================
+    // RÉPONSE
+    // ==============================
+
+    return res.status(200).json(data);
   } catch (error) {
+    console.error("Erreur Deezer :", error);
 
-    console.error(error);
-
-    res.status(500).json({
-      error: "Erreur lors de la récupération des données"
+    return res.status(500).json({
+      error:
+        "Erreur lors de la récupération des données Deezer",
+      details: error.message,
     });
   }
 }
